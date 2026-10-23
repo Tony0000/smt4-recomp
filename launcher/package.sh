@@ -89,7 +89,8 @@ case "$(uname -s)" in
 EOF
         set_dir=$(mktemp -d)/launcher.iconset
         mkdir -p "$set_dir"
-        picture=assets/icon.png
+        # with the margin macOS leaves round an app's icon
+        picture=assets/icon-mac.png
         if [ -n "$icon" ]; then
             # square, the picture whole on black, for the sizes below
             picture="$(dirname "$set_dir")/icon.png"
