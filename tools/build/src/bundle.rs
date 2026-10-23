@@ -172,6 +172,8 @@ pub fn bundle(root: &Path, work: &Path, exe: &Path, rom: &Path) -> PathBuf {
     copy(exe, &macos.join("smt4-game"));
     let launcher = macos.join("SMT4");
     write(&launcher, LAUNCHER);
+    // only macOS gets this far, but the builder compiles everywhere
+    #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
         std::fs::set_permissions(&launcher, std::fs::Permissions::from_mode(0o755))

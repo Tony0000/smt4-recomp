@@ -30,8 +30,8 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 const TITLE_ID: u64 = 0x0004_0000_000E_5C00;
-/// 3dsrecomp, from the fork with the macOS changes until fearkov/3dsrecomp
-/// has them; SMT4_RECOMP_URL names another
+/// 3dsrecomp, from this project's fork of fearkov's, with the macOS changes;
+/// SMT4_RECOMP_URL names another
 const RECOMP_URL: &str = "https://github.com/Tony0000/3dsrecomp";
 /// the 3dsrecomp version the overrides and patches were made and tested with,
 /// c3f21f9 and the macOS changes; SMT4_RECOMP_REV names another

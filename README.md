@@ -104,14 +104,16 @@ target\release\smt4-launcher.exe
 ```
 
 On macOS it's `target/release/smt4-launcher`, and it installs the tools with
-`xcode-select --install`, rustup and `brew install molten-vk` instead.
+`xcode-select --install`, rustup and `brew install molten-vk` instead. It
+builds `SMT4.app` too (see `--bundle` below) once MoltenVK is installed, and
+Play opens it.
 
 It holds no game code, so it can be shared.
 
 ### From the command line
 
 ```
-git clone https://github.com/Invictus-potens/smt4-recomp
+git clone https://github.com/Tony0000/smt4-recomp
 cd smt4-recomp
 cargo build-game "C:\path\to\Shin Megami Tensei IV (USA).3ds"
 ```
@@ -300,7 +302,7 @@ an image doesn't change: [MODDING.md](docs/MODDING.md).
 | Overrides | `overrides/` | Functions written by hand that replace generated ones: the Macca and App Points multipliers, widescreen |
 | Patches | `tools/build/src/patch.rs` | Changes the generated C where an override can't reach (hero and demon EXP, the projection) |
 | Program | `Cargo.toml`, `build.rs`, `src/main.rs` | Links the compiled code with Zakuro |
-| Runtime | [Zakuro](https://github.com/fearkov/zakuro), from [a fork](https://github.com/Tony0000/zakuro/tree/macos) for now | 3DS kernel, services, GPU and sound; the fork adds macOS, the menu bar, the internal resolution while playing and installing texture packs |
+| Runtime | [Zakuro](https://github.com/fearkov/zakuro), from this project's [fork](https://github.com/Tony0000/zakuro/tree/macos) | 3DS kernel, services, GPU and sound; the fork adds macOS, the menu bar, the internal resolution while playing and installing texture packs |
 | macOS app | `tools/build/src/bundle.rs`, `icon.rs` (`--bundle`) | Makes `SMT4.app` with MoltenVK and the ROM's icon inside |
 | Image mods | `tools/fit-texture` (`cargo fit-texture`) | Makes and installs a texture pack picture, see [MODDING.md](docs/MODDING.md) |
 | Asset extractor | `tools/extract/` | Pulls the game's files out of the ROM and converts them, see [ASSETS.md](docs/ASSETS.md) |
@@ -317,6 +319,8 @@ More: [progress and known issues](docs/PROGRESS.md),
 
 - **fearkov**: [3dsrecomp](https://github.com/fearkov/3dsrecomp) and
   [Zakuro](https://github.com/fearkov/zakuro), which do the heavy lifting.
+- **Invictus-potens**: [smt4-recomp](https://github.com/Invictus-potens/smt4-recomp),
+  which this project carries on.
 - **lucky**: the 60 FPS and 30 FPS codes, from
   [Reshiban/60FPS-AR-CHEATS-3DS](https://github.com/Reshiban/60FPS-AR-CHEATS-3DS).
 - **JourneyOver** and the codes' original authors: the community cheats,
