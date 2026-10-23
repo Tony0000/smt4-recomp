@@ -1,0 +1,13 @@
+{
+    "apps": [
+        {
+            "name": "Shin Megami Tensei IV",
+            "project": "smt4-recomp",
+            "repository": "Tony0000/smt4-recomp",
+            "folderName": "ShinMegamiTenseiIV-smt4recomp",
+            "releaseAssetFilter": "smt4-launcher",
+            "tags": ["3ds", "recomp"],
+            "appIconUrl": "https://raw.githubusercontent.com/Tony0000/smt4-recomp/main/launcher/assets/icon.png"
+        }
+    ]
+}
