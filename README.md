@@ -34,6 +34,8 @@ cheat menu.
 - [Playing](#playing)
 - [Cheats and enhancements](#cheats-and-enhancements)
 - [Controls](#controls)
+- [Menu bar](#menu-bar)
+- [Texture packs](#texture-packs)
 - [Extracting assets](#extracting-assets)
 - [Troubleshooting](#troubleshooting)
 - [How it works](#how-it-works)
@@ -53,6 +55,14 @@ cheat menu.
   menu.
 - **60 FPS** (the game runs twice as fast with it) and **30 FPS** to go back.
 - Community cheats: max Macca, App Points, items, hero EXP, HP/MP and stats.
+- **macOS** on Apple Silicon: drawn with Vulkan on Metal through MoltenVK,
+  with no OpenGL, and `SMT4.app` to open from the Finder, with the game's own
+  icon and MoltenVK inside.
+- **Menu bar** on macOS and Windows with everything the Escape menu has, the
+  screen settings and the cheats, see [Menu bar](#menu-bar).
+- **Internal resolution** from 1x to 8x, changed while playing.
+- **Texture packs** installed from a .zip or a folder while playing, no
+  restart, see [Texture packs](#texture-packs).
 - Everything Zakuro has: Vulkan (Metal through MoltenVK on macOS) or
   OpenGL, screen layouts, scaling and filters, save states, controllers, 3D.
 
@@ -125,8 +135,9 @@ cargo build-game ~/Games/"Shin Megami Tensei IV (USA).3ds"
 
 Add `--bundle` to also make `target/release/SMT4.app`, which opens from the
 Finder with the ROM it was built from (or one dropped on it) and carries
-MoltenVK inside, so it doesn't need Homebrew to run. Like the program, it
-holds the game's code: don't share it.
+MoltenVK inside, so it doesn't need Homebrew to run. Its icon is the game's
+own, the one the 3DS HOME Menu shows, read from your ROM as the app is made.
+Like the program, it holds the game's code: don't share it.
 
 ## Playing
 
@@ -138,7 +149,8 @@ It reads the game's files and everything but the code from your dump, so
 keep the ROM where it is. Saves, save states and settings go in Zakuro's
 folder, `%APPDATA%\zakuro` (on macOS, `~/Library/Application Support/zakuro`).
 
-Recommended setup (Escape opens the menu):
+Recommended setup (Escape opens the menu; on macOS and Windows the
+[menu bar](#menu-bar) has the same):
 
 1. **Settings**, Layout: **Top screen only**. F10 switches to the bottom
    screen and back, for the map and menus.
@@ -186,7 +198,47 @@ Keyboard defaults, all changeable in Settings. Controllers work too.
 | C-Stick | T F G H | | Touch screen | mouse |
 
 On a Mac keyboard the F keys need Fn held, unless they're set as standard
-function keys in System Settings, Keyboard.
+function keys in System Settings, Keyboard, or use the Cmd shortcuts of the
+menu bar.
+
+## Menu bar
+
+On macOS (the bar at the top of the screen) and Windows (in the window) the
+menus have everything the Escape menu has, and the settings that are lists:
+
+| Menu | What's in it |
+|---|---|
+| Game | Resume, Pause, Reset, Save / Load state, State slot 1 to 9, Back to the library |
+| View | Internal resolution (Resolução Interna) 1x to 8x, Screens, Top screen shape, Filter, Scale by whole numbers, 3D, Show the frame rate, Fullscreen |
+| Cheats | The game's cheats, ticked when on, and the Cheats window |
+| Tools | Multiplayer, Show the camera a picture, Install a texture pack (.zip or folder), Mute, Settings (Windows) |
+| Help | Copy info for a report |
+
+What's ticked follows the game, whichever way a setting changed. On macOS
+the app menu has Settings (Cmd+,) and Quit (Cmd+Q), and these shortcuts work
+alongside the F keys: Cmd+P pause, Cmd+R reset, Cmd+S / Cmd+L save / load
+state, Cmd+1 to Cmd+5 screens, Ctrl+Cmd+F full screen. On Linux there is no
+bar: the Escape menu and Settings have it all.
+
+The **internal resolution** is how many times the console's 400x240 the 3D
+is drawn at. It changes while playing, from the View menu at once or from
+Settings when the window closes, and a note at the top says the one the GPU
+took. Higher sharpens the 3D's edges; text and 2D art are textures of the
+console's size, which a texture pack redraws.
+
+## Texture packs
+
+Packs made for Citra or Azahar work. Install one while playing: Tools,
+**Install a texture pack (.zip)…** or **(folder)…**, or the buttons beside
+*Texture packs* in Settings. It's unzipped or copied in the background into
+a folder of its own, named after it, in the game's textures folder, and the
+game draws with it right away, no restart. Several packs can sit side by
+side; installing one of the same name again replaces it. A .zip with no
+pictures in it, or one that can't be read, leaves nothing behind.
+
+The textures folder is
+`%APPDATA%\zakuro\mods\00040000000E5C00\textures` (on macOS,
+`~/Library/Application Support/zakuro/mods/00040000000E5C00/textures`).
 
 ## Extracting assets
 
@@ -248,7 +300,8 @@ an image doesn't change: [MODDING.md](docs/MODDING.md).
 | Overrides | `overrides/` | Functions written by hand that replace generated ones: the Macca and App Points multipliers, widescreen |
 | Patches | `tools/build/src/patch.rs` | Changes the generated C where an override can't reach (hero and demon EXP, the projection) |
 | Program | `Cargo.toml`, `build.rs`, `src/main.rs` | Links the compiled code with Zakuro |
-| Runtime | [Zakuro](https://github.com/fearkov/zakuro) | 3DS kernel, services, GPU and sound |
+| Runtime | [Zakuro](https://github.com/fearkov/zakuro), from [a fork](https://github.com/Tony0000/zakuro/tree/macos) for now | 3DS kernel, services, GPU and sound; the fork adds macOS, the menu bar, the internal resolution while playing and installing texture packs |
+| macOS app | `tools/build/src/bundle.rs`, `icon.rs` (`--bundle`) | Makes `SMT4.app` with MoltenVK and the ROM's icon inside |
 | Image mods | `tools/fit-texture` (`cargo fit-texture`) | Makes and installs a texture pack picture, see [MODDING.md](docs/MODDING.md) |
 | Asset extractor | `tools/extract/` | Pulls the game's files out of the ROM and converts them, see [ASSETS.md](docs/ASSETS.md) |
 | Cheats | `cheats/00040000000E5C00.txt` | Codes for Zakuro's cheat menu; the *smt4-recomp* ones write a control byte the overrides read |
