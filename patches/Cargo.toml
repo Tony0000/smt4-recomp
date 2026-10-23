@@ -1,0 +1,12 @@
+[package]
+name = "smt4-patches"
+version = "1.0.0"
+edition = "2021"
+description = "What smt4-recomp changes in Shin Megami Tensei IV's recompiled code: the patches to the generated C, the overrides and the cheats"
+license = "MIT"
+publish = false
+
+# no dependencies: the builder and the launcher both take it
+
+# a project of its own, separate from the game's
+[workspace]

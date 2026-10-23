@@ -6,7 +6,9 @@ description = "Builds smt4-recomp from your own copy of Shin Megami Tensei IV (U
 license = "MIT"
 publish = false
 
-# no dependencies: it builds in a few seconds, offline
+# no dependencies but the project's own: it builds in a few seconds, offline
+[dependencies]
+smt4-patches = { path = "../../patches" }
 
 [profile.release]
 debug = false

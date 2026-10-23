@@ -16,14 +16,28 @@
  */
 
 #include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <time.h>
 #include "overrides.h"
 
-/* Rust side, src/main.rs: logs each boost (C stdio isn't reliable in the
- * Windows GUI app). */
-extern void smt4_log_override(const char *resource, uint32_t lr,
+/* notes each boost in the file SMT4_HOOK_LOG names, when it's set, opened
+ * for each line so it works in the Windows GUI app too, whose stdout goes
+ * nowhere. Here rather than in the program, so the code carries it whether
+ * it's linked into smt4 or loaded by Zakuro as a library. */
+static void smt4_log_override(const char *resource, uint32_t lr,
                               uint32_t total_before, int32_t delta_in, int32_t delta_out,
-                              int32_t num, int32_t den);
+                              int32_t num, int32_t den)
+{
+    const char *path = getenv("SMT4_HOOK_LOG");
+    if (!path || !*path) return;
+    FILE *log = fopen(path, "a");
+    if (!log) return;
+    fprintf(log, "multiplier: %s %d -> %d (x%d/%d), total before %u, from 0x%08X\n",
+            resource ? resource : "?", (int)delta_in, (int)delta_out, (int)num, (int)den,
+            (unsigned)total_before, (unsigned)lr);
+    fclose(log);
+}
 
 #define CTRL_MACCA      0x004EFF00u
 #define CTRL_HERO_EXP   0x004EFF01u

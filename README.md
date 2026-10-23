@@ -91,7 +91,28 @@ cheat menu.
 
 ## Building
 
-### With the launcher
+### From a release (no Rust, no git)
+
+Download the file for your system from the
+[releases](https://github.com/Tony0000/smt4-recomp/releases), unpack it and
+open the launcher: `SMT4.app` on macOS, `smt4-launcher.exe` on Windows,
+`smt4-launcher` on Linux. Choose your ROM and press **Install and play**.
+
+The release holds no game code: the launcher, this project's changes, and
+the Zakuro that runs the game. Installing recompiles the game from your ROM
+into a library that Zakuro loads, once (a few minutes or more), with your
+system's C compiler, or with Zig, which it downloads by itself when there is
+none (about 54 MB on macOS, 100 MB on Windows). That's all it needs: no
+Rust, no git, no copy of this project. The library goes in the launcher's
+folder (`~/Library/Application Support/smt4-recomp/recompiled` on macOS,
+`%APPDATA%\smt4-recomp\recompiled` on Windows); press **Install again** after
+a new release. `smt4-launcher --install <rom>` does the same with no window.
+
+Zakuro's own **Recompile** button, in its library, leaves this project's
+changes out: don't use it for this game. The launcher's library is the one
+the game runs anyway.
+
+### With the launcher, from source
 
 `launcher/` is a small program that does it all from a window: choose the
 folder with your game (it finds the ROM in it), see which tools are missing
@@ -145,21 +166,21 @@ Like the program, it holds the game's code: don't share it.
 ## Quiver Launcher
 
 [Quiver Launcher](https://github.com/tgeorgiadis/quiver-launcher) installs
-this project's launcher from its [releases](https://github.com/Tony0000/smt4-recomp/releases),
-which hold no game code: there's one for Windows, macOS (`SMT4 Launcher.app`)
-and Linux. In Quiver, **Settings → Advanced → My app list**, set:
+this project's [releases](https://github.com/Tony0000/smt4-recomp/releases),
+which hold no game code: there's one for Windows, macOS (`SMT4.app`) and
+Linux. In Quiver, **Settings → Advanced → My app list**, set:
 
 ```
 https://raw.githubusercontent.com/Tony0000/smt4-recomp/main/quiver.json
 ```
 
 then add *Shin Megami Tensei IV* from **My app list** in the App Catalog.
-Quiver keeps the launcher up to date; the launcher builds the game from your
-ROM, as above, and plays it.
+Quiver keeps it up to date; the launcher installs the game from your ROM,
+as above, and plays it.
 
-A release is made by tagging a version, `git tag v1.0.0 && git push origin
-v1.0.0`: `.github/workflows/release.yml` builds the launcher on each system
-with `launcher/package.sh` and attaches it.
+A release is made by tagging a version, `git tag v1.1.0 && git push origin
+v1.1.0`: `.github/workflows/release.yml` builds the launcher and Zakuro on
+each system and packs them with `launcher/package.sh`.
 
 ## Playing
 
@@ -316,11 +337,11 @@ an image doesn't change: [MODDING.md](docs/MODDING.md).
 
 | Part | Where | What it does |
 |---|---|---|
-| Launcher | `launcher/` | A window around `tools/build`: finds the ROM, checks the tools, builds, plays |
+| Launcher | `launcher/` | From a release, installs the game from your ROM into a library for the Zakuro beside it, and plays it (`src/install.rs`); from source, a window around `tools/build` |
 | Builder | `tools/build` (`cargo build-game`) | Runs every step below, from your ROM to the program |
 | Recompiler | [3dsrecomp](https://github.com/fearkov/3dsrecomp) | Finds the game's functions and writes them as C, into `code/` (not in this repo) |
 | Overrides | `overrides/` | Functions written by hand that replace generated ones: the Macca and App Points multipliers, widescreen |
-| Patches | `tools/build/src/patch.rs` | Changes the generated C where an override can't reach (hero and demon EXP, the projection) |
+| Patches | `patches/` (`smt4-patches`) | Changes the generated C where an override can't reach (hero and demon EXP, the projection), and carries the overrides and cheats, for the builder and the launcher alike |
 | Program | `Cargo.toml`, `build.rs`, `src/main.rs` | Links the compiled code with Zakuro |
 | Runtime | [Zakuro](https://github.com/fearkov/zakuro), from this project's [fork](https://github.com/Tony0000/zakuro/tree/macos) | 3DS kernel, services, GPU and sound; the fork adds macOS, the menu bar, the internal resolution while playing and installing texture packs |
 | macOS app | `tools/build/src/bundle.rs`, `icon.rs` (`--bundle`) | Makes `SMT4.app` with MoltenVK and the ROM's icon inside |

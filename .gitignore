@@ -16,5 +16,6 @@ code/
 /.build
 /tools/extract/target
 /tools/build/target
+/patches/target
 /tools/fit-texture/target
 /launcher/target

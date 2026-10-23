@@ -5,3 +5,10 @@ version = 4
 [[package]]
 name = "smt4-build"
 version = "0.1.0"
+dependencies = [
+ "smt4-patches",
+]
+
+[[package]]
+name = "smt4-patches"
+version = "1.0.0"

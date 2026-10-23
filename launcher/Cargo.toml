@@ -8,6 +8,12 @@ publish = false
 
 [dependencies]
 rfd = "0.17"
+# the release's install, which recompiles the game into a library for the
+# Zakuro beside the launcher, with this project's patches and overrides
+recomp3ds = { git = "https://github.com/Tony0000/3dsrecomp", branch = "macos" }
+smt4-patches = { path = "../patches" }
+# checking the Zig it downloads
+sha2 = "0.10"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 

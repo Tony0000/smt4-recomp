@@ -22,17 +22,36 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+      - name: Zakuro commit the program builds with
+        id: zakuro
+        shell: bash
+        run: |
+          sha=$(awk '/^name = "zakuro"$/{f=1} f&&/^source = /{sub(/.*#/,""); sub(/"$/,""); print; exit}' Cargo.lock)
+          test -n "$sha"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
+        with:
+          repository: Tony0000/zakuro
+          ref: ${{ steps.zakuro.outputs.sha }}
+          path: zakuro
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: |
+            patches
             tools/build
             tools/extract
             tools/fit-texture
             launcher
-      - name: Linux libraries for the launcher's window and file dialogs
+            zakuro
+      - name: Linux libraries for the launcher's window and file dialogs, and Zakuro's sound, controllers and windows
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libgtk-3-dev libxkbcommon-dev libwayland-dev
+        run: sudo apt-get update && sudo apt-get install -y libgtk-3-dev libasound2-dev libudev-dev libxkbcommon-dev libwayland-dev libx11-dev libclang-dev
+      - name: MoltenVK, which Zakuro draws with on macOS
+        if: runner.os == 'macOS'
+        run: brew install molten-vk
+      - name: Patches, overrides and cheats
+        run: cargo test --release --manifest-path patches/Cargo.toml
       - name: Builder
         run: cargo test --release --manifest-path tools/build/Cargo.toml
       - name: Asset extractor
@@ -41,11 +60,23 @@ jobs:
         run: cargo test --release --manifest-path tools/fit-texture/Cargo.toml
       - name: Launcher
         run: cargo test --release --manifest-path launcher/Cargo.toml
-      - name: Launcher package, as a release ships it
+      - name: Zakuro
+        shell: bash
+        working-directory: zakuro
+        run: |
+          # macOS has no OpenGL worth having, Zakuro presents through MoltenVK
+          features=
+          if [ "$RUNNER_OS" = macOS ]; then features=--no-default-features; fi
+          cargo build --release --locked -p zakuro $features
+        env:
+          MACOSX_DEPLOYMENT_TARGET: "11.0"
+      - name: Package, as a release ships it
         shell: bash
         run: launcher/package.sh
         env:
           MACOSX_DEPLOYMENT_TARGET: "11.0"
+          # relative, Windows paths in GITHUB_WORKSPACE have backslashes
+          ZAKURO_BIN: zakuro/target/release/zakuro${{ runner.os == 'Windows' && '.exe' || '' }}
 
   game:
     name: Program (${{ matrix.os }})

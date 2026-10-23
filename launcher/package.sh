@@ -1,15 +1,32 @@
 #!/bin/sh
-# Builds the launcher and puts it in the file a release ships for this
-# system, in target/release, named the way launchers that install from
-# releases, such as Quiver Launcher, tell systems apart:
+# Builds the launcher and puts it, with the Zakuro that runs the game, in
+# the file a release ships for this system, in target/release, named the
+# way launchers that install from releases, such as Quiver Launcher, tell
+# systems apart:
 #
-#   smt4-launcher-windows-x64.zip   smt4-launcher.exe
-#   smt4-launcher-macos-arm64.zip   SMT4 Launcher.app, signed ad hoc
-#   smt4-launcher-linux-x64.tar.gz  smt4-launcher
+#   smt4-windows-x64.zip   smt4-launcher.exe, zakuro.exe
+#   smt4-macos-arm64.zip   SMT4.app, with zakuro and MoltenVK, signed ad hoc
+#   smt4-linux-x64.tar.gz  smt4-launcher, zakuro
 #
-# It holds no game code, so it can be shared. Run from launcher/, in a
-# POSIX shell (Git Bash on Windows).
+# ZAKURO_BIN names the zakuro binary to ship, built from the Tony0000/zakuro
+# commit Cargo.lock pins (on macOS with --no-default-features, which leaves
+# OpenGL out). macOS takes MoltenVK from Homebrew (brew install molten-vk).
+#
+# It holds no game code, so it can be shared. Run in a POSIX shell (Git
+# Bash on Windows).
 set -eu
+
+if [ -z "${ZAKURO_BIN:-}" ]; then
+    echo "ZAKURO_BIN is not set: point it at the zakuro binary to ship, built with" >&2
+    echo "cargo build --release -p zakuro from the Tony0000/zakuro commit in Cargo.lock" >&2
+    exit 1
+fi
+if [ ! -f "$ZAKURO_BIN" ]; then
+    echo "ZAKURO_BIN is $ZAKURO_BIN, which is not a file" >&2
+    exit 1
+fi
+# the path may be relative to where the script was called from
+zakuro=$(cd "$(dirname "$ZAKURO_BIN")" && pwd)/$(basename "$ZAKURO_BIN")
 cd "$(dirname "$0")"
 
 cargo build --release
@@ -22,10 +39,17 @@ esac
 
 case "$(uname -s)" in
     Darwin)
-        app="$out/SMT4 Launcher.app"
+        molten=$(brew --prefix molten-vk)
+        app="$out/SMT4.app"
         rm -rf "$app"
-        mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
+        mkdir -p "$app/Contents/MacOS" "$app/Contents/Frameworks" "$app/Contents/Resources"
         cp "$out/smt4-launcher" "$app/Contents/MacOS/smt4-launcher"
+        cp "$zakuro" "$app/Contents/MacOS/zakuro"
+        # Zakuro looks for it in <exe>/../Frameworks; -L copies the file
+        # itself, not Homebrew's link to it
+        cp -L "$molten/lib/libMoltenVK.dylib" "$app/Contents/Frameworks/libMoltenVK.dylib"
+        chmod u+w "$app/Contents/Frameworks/libMoltenVK.dylib"
+        cp "$molten/LICENSE" "$app/Contents/Resources/MoltenVK-LICENSE"
         version=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -n 1)
         cat > "$app/Contents/Info.plist" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
@@ -33,7 +57,7 @@ case "$(uname -s)" in
 <plist version="1.0">
 <dict>
     <key>CFBundleName</key>
-    <string>SMT4 Launcher</string>
+    <string>SMT4</string>
     <key>CFBundleDisplayName</key>
     <string>Shin Megami Tensei IV for PC</string>
     <key>CFBundleIdentifier</key>
@@ -63,20 +87,35 @@ EOF
         done
         iconutil -c icns "$set_dir" -o "$app/Contents/Resources/launcher.icns"
         rm -rf "$(dirname "$set_dir")"
+        # from the inside out: a bundle's signature covers what it holds
+        codesign --force --sign - "$app/Contents/Frameworks/libMoltenVK.dylib"
+        codesign --force --sign - "$app/Contents/MacOS/zakuro"
+        codesign --force --sign - "$app/Contents/MacOS/smt4-launcher"
         codesign --force --sign - "$app"
-        package="$out/smt4-launcher-macos-$arch.zip"
+        package="$out/smt4-macos-$arch.zip"
         rm -f "$package"
-        # ditto keeps the bundle whole: its executable bit and signature
+        # ditto keeps the bundle whole: its executable bits and signatures
         ditto -c -k --keepParent "$app" "$package"
         ;;
     Linux)
-        package="$out/smt4-launcher-linux-$arch.tar.gz"
-        tar -czf "$package" -C "$out" smt4-launcher
+        stage="$out/package"
+        rm -rf "$stage"
+        mkdir -p "$stage"
+        cp "$out/smt4-launcher" "$stage/smt4-launcher"
+        cp "$zakuro" "$stage/zakuro"
+        package="$out/smt4-linux-$arch.tar.gz"
+        tar -czf "$package" -C "$stage" smt4-launcher zakuro
         ;;
     MINGW* | MSYS* | CYGWIN* | Windows_NT)
-        package="$out/smt4-launcher-windows-$arch.zip"
+        # copied by the shell first, which reads its own paths in ZAKURO_BIN
+        stage="$out/package"
+        rm -rf "$stage"
+        mkdir -p "$stage"
+        cp "$out/smt4-launcher.exe" "$stage/smt4-launcher.exe"
+        cp "$zakuro" "$stage/zakuro.exe"
+        package="$out/smt4-windows-$arch.zip"
         rm -f "$package"
-        powershell -NoProfile -Command "Compress-Archive -Force -Path '$out/smt4-launcher.exe' -DestinationPath '$package'"
+        powershell -NoProfile -Command "Compress-Archive -Force -Path '$stage/*' -DestinationPath '$package'"
         ;;
     *)
         echo "no package for $(uname -s)" >&2

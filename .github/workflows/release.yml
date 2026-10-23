@@ -1,5 +1,6 @@
-# Ships the launcher, which holds no game code, as a release for each
-# system when a version is tagged (git tag v1.0.0 && git push origin v1.0.0).
+# Ships the launcher and the Zakuro that runs the game, which hold no game
+# code, as a release for each system when a version is tagged (git tag
+# v1.0.0 && git push origin v1.0.0).
 # Launchers that install from releases, such as Quiver Launcher, pick the
 # file by the system in its name. Run by hand, it only builds the files, to
 # look at before a release.
@@ -31,18 +32,45 @@ jobs:
         shell: bash
     steps:
       - uses: actions/checkout@v4
+      - name: Zakuro commit the program builds with
+        id: zakuro
+        run: |
+          sha=$(awk '/^name = "zakuro"$/{f=1} f&&/^source = /{sub(/.*#/,""); sub(/"$/,""); print; exit}' Cargo.lock)
+          test -n "$sha"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
+        with:
+          repository: Tony0000/zakuro
+          ref: ${{ steps.zakuro.outputs.sha }}
+          path: zakuro
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
         with:
-          workspaces: launcher
-      - name: Linux libraries for the launcher's window and file dialogs
+          workspaces: |
+            launcher
+            zakuro
+      - name: Linux libraries for the launcher's window and file dialogs, and Zakuro's sound, controllers and windows
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libgtk-3-dev libxkbcommon-dev libwayland-dev
+        run: sudo apt-get update && sudo apt-get install -y libgtk-3-dev libasound2-dev libudev-dev libxkbcommon-dev libwayland-dev libx11-dev libclang-dev
+      - name: MoltenVK, which Zakuro draws with on macOS
+        if: runner.os == 'macOS'
+        run: brew install molten-vk
+      - name: Zakuro
+        working-directory: zakuro
+        run: |
+          # macOS has no OpenGL worth having, Zakuro presents through MoltenVK
+          features=
+          if [ "$RUNNER_OS" = macOS ]; then features=--no-default-features; fi
+          cargo build --release --locked -p zakuro $features
+        env:
+          MACOSX_DEPLOYMENT_TARGET: "11.0"
       - name: Package
         id: package
         run: echo "file=$(launcher/package.sh | tail -n 1)" >> "$GITHUB_OUTPUT"
         env:
           MACOSX_DEPLOYMENT_TARGET: "11.0"
+          # relative, Windows paths in GITHUB_WORKSPACE have backslashes
+          ZAKURO_BIN: zakuro/target/release/zakuro${{ runner.os == 'Windows' && '.exe' || '' }}
       - uses: actions/upload-artifact@v4
         with:
           name: launcher-${{ matrix.os }}
@@ -59,7 +87,7 @@ jobs:
         with:
           path: files
           merge-multiple: true
-      - name: Release with the launcher for each system
+      - name: Release with the launcher and Zakuro for each system
         run: gh release create "$GITHUB_REF_NAME" files/* --repo "$GITHUB_REPOSITORY" --title "$GITHUB_REF_NAME" --generate-notes
         env:
           GH_TOKEN: ${{ github.token }}

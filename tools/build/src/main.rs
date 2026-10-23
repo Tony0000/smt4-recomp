@@ -29,7 +29,7 @@ use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-const TITLE_ID: u64 = 0x0004_0000_000E_5C00;
+use smt4_patches::TITLE_ID;
 /// 3dsrecomp, from this project's fork of fearkov's, with the macOS changes;
 /// SMT4_RECOMP_URL names another
 const RECOMP_URL: &str = "https://github.com/Tony0000/3dsrecomp";
@@ -447,78 +447,13 @@ fn zakuro_dir() -> PathBuf {
     }
 }
 
-/// the cheats in a cheats file, by name in the order they come, each with
-/// its lines
-fn cheat_blocks(text: &str) -> Vec<(String, Vec<String>)> {
-    let mut blocks: Vec<(String, Vec<String>)> = Vec::new();
-    let mut current: Option<usize> = None;
-    for line in text.lines() {
-        if line.starts_with('[') && line.trim_end().ends_with(']') {
-            let name = line.trim().to_owned();
-            // a name seen twice keeps its place and the last lines
-            current = Some(match blocks.iter().position(|(n, _)| *n == name) {
-                Some(i) => {
-                    blocks[i].1 = vec![line.to_owned()];
-                    i
-                }
-                None => {
-                    blocks.push((name, vec![line.to_owned()]));
-                    blocks.len() - 1
-                }
-            });
-        } else if let Some(i) = current {
-            blocks[i].1.push(line.to_owned());
-        }
-    }
-    blocks
-}
-
-/// the cheats file with the cheats it lacks from ours added at the end, and
-/// how many; Zakuro keeps which cheats are on in this same file, so the ones
-/// already there are left as they are
-fn merge_cheats(theirs: &str, ours: &str) -> (String, usize) {
-    let have = cheat_blocks(theirs);
-    let missing: Vec<Vec<String>> = cheat_blocks(ours)
-        .into_iter()
-        .filter(|(name, _)| !have.iter().any(|(n, _)| n == name))
-        .map(|(_, lines)| lines)
-        .collect();
-    let newline = if theirs.contains("\r\n") { "\r\n" } else { "\n" };
-    let mut lines: Vec<String> = theirs.lines().map(str::to_owned).collect();
-    while lines.last().is_some_and(|l| l.trim().is_empty()) {
-        lines.pop();
-    }
-    for block in &missing {
-        let end = block.iter().rposition(|l| !l.trim().is_empty()).map_or(0, |i| i + 1);
-        lines.push(String::new());
-        lines.extend_from_slice(&block[..end]);
-    }
-    (lines.join(newline) + newline, missing.len())
-}
-
-fn install_cheats(root: &Path) {
+fn install_cheats() {
     step("7. cheats");
-    let name = format!("{TITLE_ID:016X}.txt");
-    let source = root.join("cheats").join(&name);
-    let target = zakuro_dir().join("cheats").join(&name);
-    let read = |path: &Path| std::fs::read_to_string(path).unwrap_or_else(|e| fail(&format!("could not read {}: {e}", path.display())));
-    let ours = read(&source);
-    let count = cheat_blocks(&ours).len();
-    let _ = std::fs::create_dir_all(target.parent().unwrap());
-    if !target.is_file() {
-        std::fs::copy(&source, &target).unwrap_or_else(|e| fail(&format!("could not copy to {}: {e}", target.display())));
-        println!("copied {count} cheats to {}", target.display());
-        return;
+    let target = zakuro_dir().join("cheats").join(format!("{TITLE_ID:016X}.txt"));
+    match smt4_patches::install_cheats(&target) {
+        Ok(done) => println!("{done}"),
+        Err(error) => fail(&error),
     }
-    let text = read(&target);
-    let (merged, added) = merge_cheats(&text, &ours);
-    if added == 0 {
-        println!("{} already has all {count} cheats", target.display());
-        return;
-    }
-    std::fs::write(&target, merged).unwrap_or_else(|e| fail(&format!("could not write {}: {e}", target.display())));
-    let kept = cheat_blocks(&text).len();
-    println!("added {added} cheats to {}, leaving the {kept} already there as they were", target.display());
 }
 
 /// the compilers started from here inherit it
@@ -602,7 +537,7 @@ fn main() {
     patch::patch(&root, &std::env::var("CC").unwrap(), &std::env::var("AR").unwrap());
     let exe = build(&root);
     if !args.no_cheats {
-        install_cheats(&root);
+        install_cheats();
     }
     let app = args.bundle.then(|| {
         step("8. the macOS app");
@@ -639,19 +574,5 @@ mod tests {
         header[0x100..0x104].copy_from_slice(b"NCCH");
         header[0x118..0x120].copy_from_slice(&7u64.to_le_bytes());
         assert_eq!(rom_title(&header), Some(7));
-    }
-
-    #[test]
-    fn adds_only_missing_cheats() {
-        let ours = "[Widescreen 16:9]\nD3000000 00000000\n\n[EXP x2]\n00000000 00000002\n\n";
-        let theirs = "[Widescreen 16:9]\n*citra_enabled\nD3000000 00000000\r\n\r\n\r\n";
-        let theirs = theirs.replace("\r\n", "\n").replace('\n', "\r\n");
-        let (merged, added) = merge_cheats(&theirs, ours);
-        assert_eq!(added, 1);
-        assert_eq!(
-            merged,
-            "[Widescreen 16:9]\r\n*citra_enabled\r\nD3000000 00000000\r\n\r\n[EXP x2]\r\n00000000 00000002\r\n"
-        );
-        assert_eq!(merge_cheats(&merged, ours).1, 0);
     }
 }
