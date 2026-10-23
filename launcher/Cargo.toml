@@ -1,6 +1,6 @@
 [package]
 name = "smt4-launcher"
-version = "1.0.0"
+version = "1.1.0"
 edition = "2021"
 description = "Launcher for smt4-recomp: pick your ROM, build the game, play"
 license = "MIT"

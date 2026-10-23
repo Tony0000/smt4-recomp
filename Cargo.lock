@@ -4773,7 +4773,7 @@ checksum = "e450f9b2ed1dff33c94c12589a87338689467b9c4f5d8a5710bd09a847d2c8a7"
 [[package]]
 name = "zakuro"
 version = "0.2.29"
-source = "git+https://github.com/Tony0000/zakuro?branch=macos#c978be6b0b5660044de51c32fdca9001ce927915"
+source = "git+https://github.com/Tony0000/zakuro?branch=macos#ea077f0ffd8bee08cbba7678d85bd75a19b29d69"
 dependencies = [
  "ab_glyph",
  "cpal",
@@ -4787,6 +4787,9 @@ dependencies = [
  "log",
  "muda",
  "nokhwa",
+ "objc2 0.6.5",
+ "objc2-app-kit 0.3.2",
+ "objc2-foundation 0.3.2",
  "raw-window-handle",
  "recomp3ds",
  "rfd",
@@ -4804,7 +4807,7 @@ dependencies = [
 [[package]]
 name = "zakuro-common"
 version = "0.2.29"
-source = "git+https://github.com/Tony0000/zakuro?branch=macos#c978be6b0b5660044de51c32fdca9001ce927915"
+source = "git+https://github.com/Tony0000/zakuro?branch=macos#ea077f0ffd8bee08cbba7678d85bd75a19b29d69"
 dependencies = [
  "bitflags 2.13.2",
  "log",
@@ -4814,7 +4817,7 @@ dependencies = [
 [[package]]
 name = "zakuro-core"
 version = "0.2.29"
-source = "git+https://github.com/Tony0000/zakuro?branch=macos#c978be6b0b5660044de51c32fdca9001ce927915"
+source = "git+https://github.com/Tony0000/zakuro?branch=macos#ea077f0ffd8bee08cbba7678d85bd75a19b29d69"
 dependencies = [
  "ab_glyph",
  "bitflags 2.13.2",
@@ -4838,7 +4841,7 @@ dependencies = [
 [[package]]
 name = "zakuro-cpu"
 version = "0.2.29"
-source = "git+https://github.com/Tony0000/zakuro?branch=macos#c978be6b0b5660044de51c32fdca9001ce927915"
+source = "git+https://github.com/Tony0000/zakuro?branch=macos#ea077f0ffd8bee08cbba7678d85bd75a19b29d69"
 dependencies = [
  "log",
  "serde",
@@ -4848,7 +4851,7 @@ dependencies = [
 [[package]]
 name = "zakuro-fs"
 version = "0.2.29"
-source = "git+https://github.com/Tony0000/zakuro?branch=macos#c978be6b0b5660044de51c32fdca9001ce927915"
+source = "git+https://github.com/Tony0000/zakuro?branch=macos#ea077f0ffd8bee08cbba7678d85bd75a19b29d69"
 dependencies = [
  "crc32fast",
  "log",
@@ -4860,7 +4863,7 @@ dependencies = [
 [[package]]
 name = "zakuro-gpu"
 version = "0.2.29"
-source = "git+https://github.com/Tony0000/zakuro?branch=macos#c978be6b0b5660044de51c32fdca9001ce927915"
+source = "git+https://github.com/Tony0000/zakuro?branch=macos#ea077f0ffd8bee08cbba7678d85bd75a19b29d69"
 dependencies = [
  "ash",
  "ash-window",
