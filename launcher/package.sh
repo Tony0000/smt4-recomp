@@ -12,6 +12,10 @@
 # commit Cargo.lock pins (on macOS with --no-default-features, which leaves
 # OpenGL out). macOS takes MoltenVK from Homebrew (brew install molten-vk).
 #
+# SMT4_ICON, on macOS, names a picture for the app's icon in place of the
+# launcher's, such as the game's cover, for an app you keep yourself: a
+# release must not carry the game's art, so it stays out of the repository.
+#
 # It holds no game code, so it can be shared. Run in a POSIX shell (Git
 # Bash on Windows).
 set -eu
@@ -25,8 +29,12 @@ if [ ! -f "$ZAKURO_BIN" ]; then
     echo "ZAKURO_BIN is $ZAKURO_BIN, which is not a file" >&2
     exit 1
 fi
-# the path may be relative to where the script was called from
+# the paths may be relative to where the script was called from
 zakuro=$(cd "$(dirname "$ZAKURO_BIN")" && pwd)/$(basename "$ZAKURO_BIN")
+icon=
+if [ -n "${SMT4_ICON:-}" ]; then
+    icon=$(cd "$(dirname "$SMT4_ICON")" && pwd)/$(basename "$SMT4_ICON")
+fi
 cd "$(dirname "$0")"
 
 cargo build --release
@@ -81,9 +89,17 @@ case "$(uname -s)" in
 EOF
         set_dir=$(mktemp -d)/launcher.iconset
         mkdir -p "$set_dir"
+        picture=assets/icon.png
+        if [ -n "$icon" ]; then
+            # square, the picture whole on black, for the sizes below
+            picture="$(dirname "$set_dir")/icon.png"
+            sips -s format png "$icon" --out "$picture" > /dev/null
+            side=$(sips -g pixelWidth -g pixelHeight "$picture" | awk '/pixel/ {print $2}' | sort -n | tail -n 1)
+            sips -p "$side" "$side" --padColor 000000 "$picture" --out "$picture" > /dev/null
+        fi
         for size in 16 32 128 256 512; do
-            sips -z $size $size assets/icon.png --out "$set_dir/icon_${size}x${size}.png" > /dev/null
-            sips -z $((size * 2)) $((size * 2)) assets/icon.png --out "$set_dir/icon_${size}x${size}@2x.png" > /dev/null
+            sips -z $size $size "$picture" --out "$set_dir/icon_${size}x${size}.png" > /dev/null
+            sips -z $((size * 2)) $((size * 2)) "$picture" --out "$set_dir/icon_${size}x${size}@2x.png" > /dev/null
         done
         iconutil -c icns "$set_dir" -o "$app/Contents/Resources/launcher.icns"
         rm -rf "$(dirname "$set_dir")"
