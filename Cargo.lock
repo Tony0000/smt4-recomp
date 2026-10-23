@@ -993,6 +993,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "crossbeam-channel"
+version = "0.5.17"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "98b0cc327b5bc766e7fda9c9260cc0fa81b43a8e240440422dff70788e3f9ef1"
+dependencies = [
+ "crossbeam-utils",
+]
+
+[[package]]
 name = "crossbeam-deque"
 version = "0.8.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1056,6 +1065,12 @@ name = "dasp_sample"
 version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0c87e182de0887fd5361989c677c4e8f5000cd9491d6d563161a8f3a5519fc7f"
+
+[[package]]
+name = "deflate64"
+version = "0.1.12"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ac6b926516df9c60bfa16e107b21086399f8285a44ca9711344b9e553c5146e2"
 
 [[package]]
 name = "defmt"
@@ -1984,6 +1999,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "keyboard-types"
+version = "0.8.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0fbe853b403ae61a04233030ae8a79d94975281ed9770a1f9e246732b534b28d"
+dependencies = [
+ "bitflags 2.13.2",
+ "serde",
+]
+
+[[package]]
 name = "khronos_api"
 version = "3.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2181,6 +2206,24 @@ checksum = "bb85c154ba489f01b25c0d36ae69a87e4a1c73a72631fc6c0eb6dde34a73e44b"
 dependencies = [
  "num-traits",
  "pxfm",
+]
+
+[[package]]
+name = "muda"
+version = "0.21.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4340e89c178916e62879c5c36b7f699019369be413e496178a6983ce91b8bc03"
+dependencies = [
+ "crossbeam-channel",
+ "dpi",
+ "keyboard-types",
+ "objc2 0.6.5",
+ "objc2-app-kit 0.3.2",
+ "objc2-core-foundation",
+ "objc2-foundation 0.3.2",
+ "png",
+ "thiserror 2.0.21",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -3817,6 +3860,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "86a801b3cea342a06d468c8710662aa29e5e05e4f5c0d62f00bbb7f2ad7941c2"
 
 [[package]]
+name = "typed-path"
+version = "0.12.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "54ec2755506471f54baf5e4bb5499d8e510cc1caf271270e778a736bd2d7336c"
+
+[[package]]
 name = "typenum"
 version = "1.20.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4725,7 +4774,7 @@ checksum = "e450f9b2ed1dff33c94c12589a87338689467b9c4f5d8a5710bd09a847d2c8a7"
 [[package]]
 name = "zakuro"
 version = "0.2.29"
-source = "git+https://github.com/Tony0000/zakuro?branch=macos#54b461a718e54dc76097ebe091cabc5bffd65078"
+source = "git+https://github.com/Tony0000/zakuro?branch=macos#c978be6b0b5660044de51c32fdca9001ce927915"
 dependencies = [
  "ab_glyph",
  "cpal",
@@ -4737,6 +4786,7 @@ dependencies = [
  "glutin-winit",
  "image",
  "log",
+ "muda",
  "nokhwa",
  "raw-window-handle",
  "recomp3ds",
@@ -4749,12 +4799,13 @@ dependencies = [
  "zakuro-core",
  "zakuro-fs",
  "zakuro-gpu",
+ "zip",
 ]
 
 [[package]]
 name = "zakuro-common"
 version = "0.2.29"
-source = "git+https://github.com/Tony0000/zakuro?branch=macos#54b461a718e54dc76097ebe091cabc5bffd65078"
+source = "git+https://github.com/Tony0000/zakuro?branch=macos#c978be6b0b5660044de51c32fdca9001ce927915"
 dependencies = [
  "bitflags 2.13.2",
  "log",
@@ -4764,7 +4815,7 @@ dependencies = [
 [[package]]
 name = "zakuro-core"
 version = "0.2.29"
-source = "git+https://github.com/Tony0000/zakuro?branch=macos#54b461a718e54dc76097ebe091cabc5bffd65078"
+source = "git+https://github.com/Tony0000/zakuro?branch=macos#c978be6b0b5660044de51c32fdca9001ce927915"
 dependencies = [
  "ab_glyph",
  "bitflags 2.13.2",
@@ -4788,7 +4839,7 @@ dependencies = [
 [[package]]
 name = "zakuro-cpu"
 version = "0.2.29"
-source = "git+https://github.com/Tony0000/zakuro?branch=macos#54b461a718e54dc76097ebe091cabc5bffd65078"
+source = "git+https://github.com/Tony0000/zakuro?branch=macos#c978be6b0b5660044de51c32fdca9001ce927915"
 dependencies = [
  "log",
  "serde",
@@ -4798,7 +4849,7 @@ dependencies = [
 [[package]]
 name = "zakuro-fs"
 version = "0.2.29"
-source = "git+https://github.com/Tony0000/zakuro?branch=macos#54b461a718e54dc76097ebe091cabc5bffd65078"
+source = "git+https://github.com/Tony0000/zakuro?branch=macos#c978be6b0b5660044de51c32fdca9001ce927915"
 dependencies = [
  "crc32fast",
  "log",
@@ -4810,7 +4861,7 @@ dependencies = [
 [[package]]
 name = "zakuro-gpu"
 version = "0.2.29"
-source = "git+https://github.com/Tony0000/zakuro?branch=macos#54b461a718e54dc76097ebe091cabc5bffd65078"
+source = "git+https://github.com/Tony0000/zakuro?branch=macos#c978be6b0b5660044de51c32fdca9001ce927915"
 dependencies = [
  "ash",
  "ash-window",
@@ -4852,6 +4903,21 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.119",
+]
+
+[[package]]
+name = "zip"
+version = "9.0.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6e04976da629d3b04204ba8105b396a193af8ad2583b2c79bfb3ab8af580a11e"
+dependencies = [
+ "crc32fast",
+ "deflate64",
+ "flate2",
+ "indexmap",
+ "memchr",
+ "nix",
+ "typed-path",
 ]
 
 [[package]]

@@ -92,9 +92,22 @@ fn moltenvk() -> (PathBuf, Option<PathBuf>) {
     (lib, license)
 }
 
-/// the icon, made from the launcher's picture at the sizes macOS asks for
-fn make_icon(root: &Path, resources: &Path, scratch: &Path) {
-    let png = root.join("launcher").join("assets").join("icon.png");
+/// the icon at the sizes macOS asks for, made from the game's own, the one
+/// the 3DS HOME Menu shows, or from the launcher's picture when the ROM's
+/// can't be read
+fn make_icon(root: &Path, resources: &Path, scratch: &Path, rom: &Path) {
+    let png = match crate::icon::from_rom(rom) {
+        Ok(rgb) => {
+            println!("icon: the game's own, from the ROM");
+            let png = scratch.join("SMT4-icon.png");
+            write_bytes(&png, &crate::icon::png(&crate::icon::scaled(&rgb, 1024), 1024));
+            png
+        }
+        Err(error) => {
+            println!("icon: the launcher's, the ROM's can't be read ({error})");
+            root.join("launcher").join("assets").join("icon.png")
+        }
+    };
     let set = scratch.join("SMT4.iconset");
     let _ = std::fs::remove_dir_all(&set);
     std::fs::create_dir_all(&set).unwrap_or_else(|e| fail(&format!("could not make {}: {e}", set.display())));
@@ -126,6 +139,10 @@ fn quietly(program: &str, args: &[&std::ffi::OsStr], cwd: &Path) {
         Ok(out) => fail(&format!("{program} failed: {}", String::from_utf8_lossy(&out.stderr).trim())),
         Err(error) => fail(&format!("could not start {program}: {error}")),
     }
+}
+
+fn write_bytes(path: &Path, bytes: &[u8]) {
+    std::fs::write(path, bytes).unwrap_or_else(|e| fail(&format!("could not write {}: {e}", path.display())));
 }
 
 fn write(path: &Path, text: &str) {
@@ -168,7 +185,7 @@ pub fn bundle(root: &Path, work: &Path, exe: &Path, rom: &Path) -> PathBuf {
     if let Some(license) = license {
         copy(&license, &resources.join("MoltenVK-LICENSE"));
     }
-    make_icon(root, &resources, work);
+    make_icon(root, &resources, work, rom);
 
     // signed ad hoc, inside out: Apple Silicon runs nothing unsigned, and a
     // copied library loses the signature it had

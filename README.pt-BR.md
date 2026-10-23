@@ -34,6 +34,8 @@ dentro do jogo.
 - [Jogando](#jogando)
 - [Cheats e melhorias](#cheats-e-melhorias)
 - [Controles](#controles)
+- [Barra de menus](#barra-de-menus)
+- [Texture packs](#texture-packs)
 - [Extraindo assets](#extraindo-assets)
 - [Problemas comuns](#problemas-comuns)
 - [Como funciona](#como-funciona)
@@ -54,6 +56,14 @@ dentro do jogo.
 - **60 FPS** (o jogo roda duas vezes mais rápido) e **30 FPS** para voltar.
 - Cheats da comunidade: Macca no máximo, App Points, itens, EXP, HP/MP e
   atributos do herói.
+- **macOS** com Apple Silicon: desenhado com Vulkan sobre Metal pelo
+  MoltenVK, sem OpenGL, e o `SMT4.app` para abrir pelo Finder, com o ícone
+  do próprio jogo e o MoltenVK dentro.
+- **Barra de menus** no macOS e no Windows com tudo o que o menu do Escape
+  tem, as configurações de tela e os cheats, veja [Barra de menus](#barra-de-menus).
+- **Resolução Interna** de 1x a 8x, trocada durante o jogo.
+- **Texture packs** instalados de um .zip ou de uma pasta durante o jogo,
+  sem reiniciar, veja [Texture packs](#texture-packs).
 - Tudo o que o Zakuro tem: Vulkan (Metal pelo MoltenVK no macOS) ou
   OpenGL, layouts de tela, escala e filtros, save states, controles, 3D.
 
@@ -128,8 +138,9 @@ cargo build-game ~/Games/"Shin Megami Tensei IV (USA).3ds"
 
 Com `--bundle`, ele também monta o `target/release/SMT4.app`, que abre pelo
 Finder com a ROM usada na compilação (ou uma arrastada para ele) e leva o
-MoltenVK dentro, sem precisar do Homebrew para rodar. Como o programa, ele
-contém o código do jogo: não compartilhe.
+MoltenVK dentro, sem precisar do Homebrew para rodar. O ícone é o do próprio
+jogo, o que a tela inicial do 3DS mostra, lido da sua ROM ao montar o app.
+Como o programa, ele contém o código do jogo: não compartilhe.
 
 ## Jogando
 
@@ -141,7 +152,8 @@ Ele lê os arquivos do jogo e tudo menos o código do seu dump, então deixe a
 ROM onde está. Saves, save states e configurações ficam na pasta do Zakuro,
 `%APPDATA%\zakuro` (no macOS, `~/Library/Application Support/zakuro`).
 
-Configuração recomendada (Escape abre o menu):
+Configuração recomendada (Escape abre o menu; no macOS e no Windows a
+[barra de menus](#barra-de-menus) tem o mesmo):
 
 1. **Settings**, Layout: **Top screen only**. F10 alterna para a tela de
    baixo e volta, para o mapa e os menus.
@@ -189,7 +201,48 @@ Padrões do teclado, todos alteráveis em Settings. Controles também funcionam.
 | C-Stick | T F G H | | Tela de toque | mouse |
 
 Num teclado de Mac, as teclas F precisam do Fn, a não ser que estejam como
-teclas de função padrão em Ajustes do Sistema, Teclado.
+teclas de função padrão em Ajustes do Sistema, Teclado, ou use os atalhos com
+Cmd da barra de menus.
+
+## Barra de menus
+
+No macOS (a barra no topo da tela) e no Windows (dentro da janela), os menus
+têm tudo o que o menu do Escape tem, e as configurações que são listas:
+
+| Menu | O que tem |
+|---|---|
+| Game | Resume, Pause, Reset, Save / Load state, State slot de 1 a 9, Back to the library |
+| View | Resolução Interna de 1x a 8x, Screens, Top screen shape, Filter, Scale by whole numbers, 3D, Show the frame rate, Fullscreen |
+| Cheats | Os cheats do jogo, marcados quando ligados, e a janela Cheats |
+| Tools | Multiplayer, Show the camera a picture, Install a texture pack (.zip ou pasta), Mute, Settings (Windows) |
+| Help | Copy info for a report |
+
+O que aparece marcado acompanha o jogo, seja qual for o jeito como a
+configuração mudou. No macOS, o menu do app tem Settings (Cmd+,) e Quit
+(Cmd+Q), e estes atalhos funcionam junto com as teclas F: Cmd+P pausa,
+Cmd+R reinicia, Cmd+S / Cmd+L salva / carrega state, Cmd+1 a Cmd+5 trocam as
+telas, Ctrl+Cmd+F tela cheia. No Linux não há barra: o menu do Escape e o
+Settings têm tudo.
+
+A **Resolução Interna** é quantas vezes os 400x240 do console o 3D é
+desenhado. Ela muda durante o jogo, na hora pelo menu View ou pelo Settings
+quando a janela fecha, e um aviso no topo diz a que a GPU aplicou. Mais alta
+deixa as bordas do 3D mais nítidas; textos e arte 2D são texturas no tamanho
+do console, que um texture pack redesenha.
+
+## Texture packs
+
+Packs feitos para o Citra ou o Azahar funcionam. Instale durante o jogo:
+Tools, **Install a texture pack (.zip)…** ou **(folder)…**, ou os botões ao
+lado de *Texture packs* no Settings. Ele é extraído ou copiado em segundo
+plano para uma pasta própria, com o nome dele, na pasta de texturas do jogo,
+e o jogo passa a desenhar com ele na hora, sem reiniciar. Vários packs
+convivem lado a lado; instalar de novo um de mesmo nome substitui o antigo.
+Um .zip sem imagens, ou que não dá para ler, não deixa nada para trás.
+
+A pasta de texturas é
+`%APPDATA%\zakuro\mods\00040000000E5C00\textures` (no macOS,
+`~/Library/Application Support/zakuro/mods/00040000000E5C00/textures`).
 
 ## Extraindo assets
 
@@ -253,7 +306,8 @@ imagem não muda (em inglês): [MODDING.md](docs/MODDING.md).
 | Overrides | `overrides/` | Funções escritas à mão que substituem as geradas: multiplicadores de Macca e App Points, widescreen |
 | Patches | `tools/build/src/patch.rs` | Altera o C gerado onde um override não alcança (EXP do herói e dos demônios, a projeção) |
 | Programa | `Cargo.toml`, `build.rs`, `src/main.rs` | Junta o código compilado com o Zakuro |
-| Runtime | [Zakuro](https://github.com/fearkov/zakuro) | Kernel, serviços, GPU e som do 3DS |
+| Runtime | [Zakuro](https://github.com/fearkov/zakuro), por enquanto de [um fork](https://github.com/Tony0000/zakuro/tree/macos) | Kernel, serviços, GPU e som do 3DS; o fork acrescenta o macOS, a barra de menus, a resolução interna durante o jogo e a instalação de texture packs |
+| App do macOS | `tools/build/src/bundle.rs`, `icon.rs` (`--bundle`) | Monta o `SMT4.app` com o MoltenVK e o ícone da ROM dentro |
 | Mods de imagem | `tools/fit-texture` (`cargo fit-texture`) | Cria e instala uma imagem de texture pack, veja [MODDING.md](docs/MODDING.md) |
 | Extrator de assets | `tools/extract/` | Tira os arquivos do jogo da ROM e converte, veja [ASSETS.md](docs/ASSETS.md) |
 | Cheats | `cheats/00040000000E5C00.txt` | Códigos do menu de cheats; os *smt4-recomp* escrevem um byte de controle que os overrides leem |
