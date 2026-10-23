@@ -41,6 +41,11 @@ jobs:
         run: cargo test --release --manifest-path tools/fit-texture/Cargo.toml
       - name: Launcher
         run: cargo test --release --manifest-path launcher/Cargo.toml
+      - name: Launcher package, as a release ships it
+        shell: bash
+        run: launcher/package.sh
+        env:
+          MACOSX_DEPLOYMENT_TARGET: "11.0"
 
   game:
     name: Program (${{ matrix.os }})

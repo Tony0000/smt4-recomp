@@ -31,6 +31,7 @@ dentro do jogo.
 - [Recursos](#recursos)
 - [Requisitos](#requisitos)
 - [Compilando](#compilando)
+- [Quiver Launcher](#quiver-launcher)
 - [Jogando](#jogando)
 - [Cheats e melhorias](#cheats-e-melhorias)
 - [Controles](#controles)
@@ -143,6 +144,25 @@ Finder com a ROM usada na compilação (ou uma arrastada para ele) e leva o
 MoltenVK dentro, sem precisar do Homebrew para rodar. O ícone é o do próprio
 jogo, o que a tela inicial do 3DS mostra, lido da sua ROM ao montar o app.
 Como o programa, ele contém o código do jogo: não compartilhe.
+
+## Quiver Launcher
+
+O [Quiver Launcher](https://github.com/tgeorgiadis/quiver-launcher) instala o
+launcher deste projeto a partir das [releases](https://github.com/Tony0000/smt4-recomp/releases),
+que não contêm código do jogo: há uma para Windows, macOS (`SMT4 Launcher.app`)
+e Linux. No Quiver, em **Settings → Advanced → My app list**, coloque:
+
+```
+https://raw.githubusercontent.com/Tony0000/smt4-recomp/main/quiver.json
+```
+
+e adicione *Shin Megami Tensei IV* em **My app list**, no App Catalog. O
+Quiver mantém o launcher atualizado; o launcher compila o jogo a partir da sua
+ROM, como acima, e abre.
+
+Uma release sai ao marcar uma versão, `git tag v1.0.0 && git push origin
+v1.0.0`: o `.github/workflows/release.yml` compila o launcher em cada sistema
+com o `launcher/package.sh` e anexa.
 
 ## Jogando
 
