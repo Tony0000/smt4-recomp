@@ -5,9 +5,9 @@
             "project": "smt4-recomp",
             "repository": "Tony0000/smt4-recomp",
             "folderName": "ShinMegamiTenseiIV-smt4recomp",
-            "releaseAssetFilter": "smt4-launcher",
+            "releaseAssetFilter": "smt4-",
             "tags": ["3ds", "recomp"],
-            "appIconUrl": "https://raw.githubusercontent.com/Tony0000/smt4-recomp/main/launcher/assets/icon.png"
+            "appIconUrl": "https://upload.wikimedia.org/wikipedia/en/f/f0/Shin_Megami_Tensei_IV.jpg"
         }
     ]
 }

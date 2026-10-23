@@ -96,11 +96,11 @@ fn moltenvk() -> (PathBuf, Option<PathBuf>) {
 /// the 3DS HOME Menu shows, or from the launcher's picture when the ROM's
 /// can't be read
 fn make_icon(root: &Path, resources: &Path, scratch: &Path, rom: &Path) {
-    let png = match crate::icon::from_rom(rom) {
+    let png = match smt4_patches::icon::from_rom(rom) {
         Ok(rgb) => {
             println!("icon: the game's own, from the ROM");
             let png = scratch.join("SMT4-icon.png");
-            write_bytes(&png, &crate::icon::png(&crate::icon::scaled(&rgb, 1024), 1024));
+            write_bytes(&png, &smt4_patches::icon::png(&smt4_patches::icon::scaled(&rgb, 1024), 1024));
             png
         }
         Err(error) => {

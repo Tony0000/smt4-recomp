@@ -7,7 +7,6 @@ edition = "2021"
 publish = false
 
 [dependencies]
-log = "0.4"
 
 # macOS presents through Vulkan on MoltenVK, with no OpenGL to fall back on
 [target.'cfg(target_os = "macos")'.dependencies]

@@ -14,6 +14,10 @@ use std::sync::{Arc, Mutex};
 use eframe::egui;
 use serde::{Deserialize, Serialize};
 
+mod game_icon;
+mod install;
+mod zig;
+
 const TITLE_ID: u64 = 0x0004_0000_000E_5C00;
 const REPO: &str = "https://github.com/Tony0000/smt4-recomp";
 /// the project's home before, whose clones look for updates here instead
@@ -23,6 +27,19 @@ const EXE: &str = if cfg!(windows) { "smt4.exe" } else { "smt4" };
 const APP: &str = "SMT4.app";
 
 fn main() -> eframe::Result {
+    // smt4-launcher --install <rom>: a release's install with no window,
+    // its log on the terminal
+    let args: Vec<std::ffi::OsString> = std::env::args_os().skip(1).collect();
+    if let [flag, rom] = args.as_slice() {
+        if flag == "--install" {
+            let say = |line: String| println!("{line}");
+            if let Err(error) = install::run(Path::new(rom), &say) {
+                eprintln!("error: {error}");
+                std::process::exit(1);
+            }
+            return Ok(());
+        }
+    }
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_title("Shin Megami Tensei IV for PC")
@@ -296,6 +313,25 @@ fn check_tools() -> Tools {
     tools
 }
 
+/// what a release's install needs: only a C compiler, the computer's or a
+/// Zig it downloads
+fn release_tools() -> Tools {
+    let mut tools = Tools::default();
+    tools.list.push(Tool {
+        name: "C compiler",
+        found: install::compiler_note(),
+        hint: if cfg!(target_os = "macos") {
+            "Compiles the game's code: install Apple's command line tools.".into()
+        } else {
+            "Compiles the game's code: install gcc or clang, or curl to download Zig.".into()
+        },
+        winget: Some("BrechtSanders.WinLibs.POSIX.UCRT"),
+        mac_install: Some(XCODE_SELECT),
+        for_build: true,
+    });
+    tools
+}
+
 // ---------------------------------------------------------------------------
 // updates: the project's git checkout against its remote
 
@@ -529,6 +565,11 @@ struct Launcher {
     then_build: bool,
     /// the project was updated since the game was last built
     stale: bool,
+    /// in a release, the Zakuro beside the launcher, which runs the game
+    /// the launcher installs; none in a checkout, which builds it
+    release: Option<PathBuf>,
+    /// play once the running install works
+    then_play: bool,
 }
 
 /// the project folder the launcher sits in, when it's run from a checkout
@@ -570,9 +611,14 @@ impl Launcher {
             updates: Arc::new(Mutex::new(Updates::Unknown)),
             then_build: false,
             stale: false,
+            release: install::zakuro(),
+            then_play: false,
         };
+        if let Some(rom) = launcher.config.rom.as_deref().filter(|_| launcher.rom_error.is_none()) {
+            game_icon::show(ctx, rom);
+        }
         launcher.refresh_tools(ctx);
-        if launcher.config.check_updates {
+        if launcher.config.check_updates && launcher.release.is_none() {
             launcher.refresh_updates(ctx);
         }
         launcher
@@ -596,9 +642,10 @@ impl Launcher {
     fn refresh_tools(&self, ctx: &egui::Context) {
         let tools = self.tools.clone();
         let ctx = ctx.clone();
+        let release = self.release.is_some();
         *tools.lock().unwrap() = None;
         std::thread::spawn(move || {
-            *tools.lock().unwrap() = Some(check_tools());
+            *tools.lock().unwrap() = Some(if release { release_tools() } else { check_tools() });
             ctx.request_repaint();
         });
     }
@@ -611,8 +658,11 @@ impl Launcher {
         self.source().join("target").join("release").join(EXE)
     }
 
-    fn set_rom(&mut self, rom: PathBuf) {
+    fn set_rom(&mut self, ctx: &egui::Context, rom: PathBuf) {
         self.rom_error = check_rom(&rom).err();
+        if self.rom_error.is_none() {
+            game_icon::show(ctx, &rom);
+        }
         self.config.rom = Some(rom);
         self.config.save();
     }
@@ -671,6 +721,14 @@ impl Launcher {
     }
 
     fn play(&mut self) {
+        if let (Some(zakuro), Some(rom)) = (&self.release, &self.config.rom) {
+            let started = install::play(zakuro, rom).spawn();
+            self.message = Some(match started {
+                Ok(_) => "The game is starting.".into(),
+                Err(error) => format!("Could not start {}: {error}", zakuro.display()),
+            });
+            return;
+        }
         let (Some(rom), program) = (&self.config.rom, self.program()) else { return };
         // the app where there is one, which macOS shows as the game's
         let app = program.with_file_name(APP);
@@ -682,6 +740,82 @@ impl Launcher {
         self.message = Some(match started {
             Ok(_) => "The game is starting.".into(),
             Err((program, error)) => format!("Could not start {}: {error}", program.display()),
+        });
+    }
+    /// the running job's progress, or how the last one went, and the log
+    /// buttons
+    fn job_status(&mut self, ui: &mut egui::Ui) {
+        let (running, job_what, job_result, progress, step) = {
+            let j = self.job.lock().unwrap();
+            (j.running, j.what.clone(), j.result, j.progress(), j.step)
+        };
+        if running || job_result.is_some() {
+            ui.add_space(4.0);
+            if running {
+                let text = if job_what == install::WHAT && step > 0 {
+                    format!("{job_what}: {}", install::STEPS.get(step as usize).unwrap_or(&""))
+                } else if job_what == "Building the game" && step > 0 {
+                    let steps = ["", "tools", "ROM", "recompiler", "recompiling the game", "patching", "building the program", "cheats"];
+                    format!("{job_what}: {}", steps.get(step as usize).unwrap_or(&""))
+                } else {
+                    job_what.clone()
+                };
+                let bar = if job_what == "Building the game" || job_what == install::WHAT {
+                    egui::ProgressBar::new(progress).show_percentage().text(text)
+                } else {
+                    egui::ProgressBar::new(0.0).animate(true).text(text)
+                };
+                ui.add(bar);
+            } else if let Some(ok) = job_result {
+                status(ui, ok, &format!("{job_what}: {}", if ok { "done" } else { "failed, see the log" }));
+            }
+            ui.horizontal(|ui| {
+                ui.checkbox(&mut self.show_log, "Show the log");
+                if ui.button("Copy the log").clicked() {
+                    let text = self.job.lock().unwrap().log.join("\n");
+                    ui.ctx().copy_text(text);
+                    self.message = Some(if cfg!(target_os = "macos") {
+                        "The log is copied: paste it in the issue with Cmd+V."
+                    } else {
+                        "The log is copied: paste it in the issue with Ctrl+V."
+                    }.into());
+                }
+            });
+        }
+    }
+
+    /// a release's last step: install the game from the ROM, once, then play
+    fn release_section(&mut self, ui: &mut egui::Ui, ctx: &egui::Context, rom: &Path, running: bool, tools: Option<&Tools>) {
+        section(ui, |ui| {
+            ui.strong("3. Install and play");
+            let installed = install::installed(rom);
+            if installed && !running {
+                status(ui, true, "The game is installed.");
+            } else if !running {
+                ui.label("Installing recompiles the game from your copy, once: a few minutes or more. You can keep using the computer meanwhile.");
+            }
+            let can_install = !running && tools.is_some_and(Tools::ok);
+            ui.horizontal(|ui| {
+                if installed {
+                    let play = egui::Button::new(egui::RichText::new("  Play  ").size(20.0));
+                    if ui.add_enabled(!running, play).clicked() {
+                        self.play();
+                    }
+                    if ui.add_enabled(can_install, egui::Button::new("Install again")).clicked() {
+                        install::start(self.job.clone(), ctx.clone(), rom.to_owned());
+                    }
+                } else {
+                    let button = egui::Button::new(egui::RichText::new("  Install and play  ").size(20.0));
+                    if ui.add_enabled(can_install, button).clicked() {
+                        install::start(self.job.clone(), ctx.clone(), rom.to_owned());
+                        self.then_play = true;
+                    }
+                }
+            });
+            if !running && !can_install && !installed && tools.is_some() {
+                ui.weak("Needs a C compiler first.");
+            }
+            self.job_status(ui);
         });
     }
 }
@@ -708,10 +842,16 @@ impl eframe::App for Launcher {
     fn ui(&mut self, root: &mut egui::Ui, _frame: &mut eframe::Frame) {
         let ctx = &root.ctx().clone();
         let tools = self.tools.lock().unwrap().clone();
-        let (running, job_what, job_result, progress, step) = {
+        let (running, job_result) = {
             let j = self.job.lock().unwrap();
-            (j.running, j.what.clone(), j.result, j.progress(), j.step)
+            (j.running, j.result)
         };
+        if !running && self.then_play {
+            self.then_play = false;
+            if job_result == Some(true) {
+                self.play();
+            }
+        }
         if !running && self.then_build {
             self.then_build = false;
             if job_result == Some(true) {
@@ -752,7 +892,7 @@ impl eframe::App for Launcher {
                         if ui.add_enabled(!running, egui::Button::new("Choose the folder…")).clicked() {
                             if let Some(folder) = rfd::FileDialog::new().pick_folder() {
                                 match find_rom(&folder) {
-                                    Some(rom) => self.set_rom(rom),
+                                    Some(rom) => self.set_rom(ctx, rom),
                                     None => {
                                         self.message = Some(format!(
                                             "No decrypted Shin Megami Tensei IV (USA) in {}.",
@@ -764,7 +904,7 @@ impl eframe::App for Launcher {
                         }
                         if ui.add_enabled(!running, egui::Button::new("Choose the file…")).clicked() {
                             if let Some(file) = rfd::FileDialog::new().add_filter("3DS game", &["3ds", "cci", "cxi"]).pick_file() {
-                                self.set_rom(file);
+                                self.set_rom(ctx, file);
                             }
                         }
                     });
@@ -773,7 +913,7 @@ impl eframe::App for Launcher {
                 // 2. tools
                 section(ui, |ui| {
                     ui.horizontal(|ui| {
-                        ui.strong("2. Tools for the build");
+                        ui.strong(if self.release.is_some() { "2. Compiler" } else { "2. Tools for the build" });
                         if ui.add_enabled(!running, egui::Button::new("Check again")).clicked() {
                             self.refresh_tools(ctx);
                         }
@@ -836,159 +976,142 @@ impl eframe::App for Launcher {
                     }
                 });
 
+                if let Some(rom) = self.config.rom.clone().filter(|_| self.release.is_some() && rom_ok) {
+                    self.release_section(ui, ctx, &rom, running, tools.as_ref());
+                } else if self.release.is_some() {
+                    section(ui, |ui| {
+                        ui.strong("3. Install and play");
+                        ui.weak("Needs your game first.");
+                    });
+                }
+
                 // 3. source
-                section(ui, |ui| {
-                    ui.strong("3. Project source");
-                    status(ui, source_ok, &self.source().display().to_string());
-                    ui.horizontal(|ui| {
-                        let git = tools.as_ref().is_some_and(|t| t.list.first().is_some_and(|g| g.found.is_some()));
-                        let old = is_old_source(&self.source());
-                        let cloned = self.source().join(".git").exists();
-                        if old && !cloned {
-                            ui.weak("This folder is an older version of the project, which built with Python. Download a newer release, or choose an empty folder and press Download.");
-                        } else if old {
-                            ui.weak("An older version of the project: press Update.");
-                            if ui.add_enabled(!running && git, egui::Button::new("Update")).clicked() {
-                                self.start_update(ctx);
-                            }
-                        } else if !source_ok {
-                            if ui.add_enabled(!running && git, egui::Button::new("Download")).clicked() {
-                                self.start_clone(ctx);
-                            }
-                        } else if cloned {
-                            match &updates {
-                                Updates::Checking => {
-                                    ui.spinner();
-                                    ui.label("Looking for updates…");
+                if self.release.is_none() {
+                    section(ui, |ui| {
+                        ui.strong("3. Project source");
+                        status(ui, source_ok, &self.source().display().to_string());
+                        ui.horizontal(|ui| {
+                            let git = tools.as_ref().is_some_and(|t| t.list.first().is_some_and(|g| g.found.is_some()));
+                            let old = is_old_source(&self.source());
+                            let cloned = self.source().join(".git").exists();
+                            if old && !cloned {
+                                ui.weak("This folder is an older version of the project, which built with Python. Download a newer release, or choose an empty folder and press Download.");
+                            } else if old {
+                                ui.weak("An older version of the project: press Update.");
+                                if ui.add_enabled(!running && git, egui::Button::new("Update")).clicked() {
+                                    self.start_update(ctx);
                                 }
-                                Updates::UpToDate => {
-                                    ui.weak("Up to date.");
+                            } else if !source_ok {
+                                if ui.add_enabled(!running && git, egui::Button::new("Download")).clicked() {
+                                    self.start_clone(ctx);
                                 }
-                                Updates::Available(_) => {}
-                                Updates::Failed(error) => {
-                                    ui.weak(format!("Couldn't look for updates: {error}"));
+                            } else if cloned {
+                                match &updates {
+                                    Updates::Checking => {
+                                        ui.spinner();
+                                        ui.label("Looking for updates…");
+                                    }
+                                    Updates::UpToDate => {
+                                        ui.weak("Up to date.");
+                                    }
+                                    Updates::Available(_) => {}
+                                    Updates::Failed(error) => {
+                                        ui.weak(format!("Couldn't look for updates: {error}"));
+                                    }
+                                    Updates::Unknown => {}
                                 }
-                                Updates::Unknown => {}
-                            }
-                            if !matches!(updates, Updates::Available(_) | Updates::Checking)
-                                && ui.add_enabled(!running && git, egui::Button::new("Check for updates")).clicked()
-                            {
-                                self.refresh_updates(ctx);
-                            }
-                        } else {
-                            ui.weak("Not a git download, so Update can't refresh it; download a newer release to update.");
-                        }
-                        if ui.add_enabled(!running, egui::Button::new("Choose another folder…")).clicked() {
-                            if let Some(folder) = rfd::FileDialog::new().pick_folder() {
-                                self.config.source = Some(folder);
-                                self.config.save();
-                                *self.updates.lock().unwrap() = Updates::Unknown;
-                                if self.config.check_updates {
+                                if !matches!(updates, Updates::Available(_) | Updates::Checking)
+                                    && ui.add_enabled(!running && git, egui::Button::new("Check for updates")).clicked()
+                                {
                                     self.refresh_updates(ctx);
                                 }
-                            }
-                        }
-                    });
-                    if let Updates::Available(commits) = &updates {
-                        ui.add_space(4.0);
-                        let what = if commits.len() == 1 { "1 update".to_owned() } else { format!("{} updates", commits.len()) };
-                        ui.colored_label(egui::Color32::from_rgb(240, 190, 80), format!("{what} available:"));
-                        for subject in commits.iter().take(8) {
-                            ui.add(egui::Label::new(format!("• {subject}")).truncate());
-                        }
-                        if commits.len() > 8 {
-                            ui.weak(format!("and {} more", commits.len() - 8));
-                        }
-                        let label = if built { "Update and rebuild" } else { "Update" };
-                        let git = tools.as_ref().is_some_and(|t| t.list.first().is_some_and(|g| g.found.is_some()));
-                        if ui.add_enabled(!running && git, egui::Button::new(label)).clicked() {
-                            self.start_update(ctx);
-                            self.then_build = built;
-                        }
-                    }
-                    if self.stale && !running {
-                        ui.weak("The project was updated: press Rebuild to use it.");
-                    }
-                    if ui.checkbox(&mut self.config.check_updates, "Look for updates when the launcher opens").changed() {
-                        self.config.save();
-                    }
-                });
-
-                // 4. build and play
-                section(ui, |ui| {
-                    ui.strong("4. Build and play");
-                    let tools_ok = tools.as_ref().is_some_and(Tools::ok);
-                    let can_build = !running && rom_ok && tools_ok && source_ok;
-                    if built && !running {
-                        status(ui, true, "The game is built.");
-                    } else if !running {
-                        ui.label("The first build takes 20 minutes or more. You can keep using the computer meanwhile.");
-                    }
-                    ui.horizontal(|ui| {
-                        if built {
-                            let play = egui::Button::new(egui::RichText::new("  Play  ").size(20.0));
-                            if ui.add_enabled(!running && rom_ok, play).clicked() {
-                                self.play();
-                            }
-                            if ui.add_enabled(can_build, egui::Button::new("Rebuild")).clicked() {
-                                if let Some(tools) = &tools {
-                                    self.start_build(ctx, tools);
-                                }
-                            }
-                        } else {
-                            let build = egui::Button::new(egui::RichText::new("  Build the game  ").size(20.0));
-                            if ui.add_enabled(can_build, build).clicked() {
-                                if let Some(tools) = &tools {
-                                    self.start_build(ctx, tools);
-                                }
-                            }
-                        }
-                    });
-                    if !running && !can_build && !built {
-                        let missing: Vec<&str> = [
-                            (!rom_ok, "your game"),
-                            (!tools_ok, "the tools"),
-                            (!source_ok, "the project source"),
-                        ]
-                        .into_iter()
-                        .filter_map(|(m, what)| m.then_some(what))
-                        .collect();
-                        if !missing.is_empty() {
-                            ui.weak(format!("Needs {} first.", missing.join(", ")));
-                        }
-                    }
-                    if running || job_result.is_some() {
-                        ui.add_space(4.0);
-                        if running {
-                            let text = if job_what == "Building the game" && step > 0 {
-                                let steps = ["", "tools", "ROM", "recompiler", "recompiling the game", "patching", "building the program", "cheats"];
-                                format!("{job_what}: {}", steps.get(step as usize).unwrap_or(&""))
                             } else {
-                                job_what.clone()
-                            };
-                            let bar = if job_what == "Building the game" {
-                                egui::ProgressBar::new(progress).show_percentage().text(text)
-                            } else {
-                                egui::ProgressBar::new(0.0).animate(true).text(text)
-                            };
-                            ui.add(bar);
-                        } else if let Some(ok) = job_result {
-                            status(ui, ok, &format!("{job_what}: {}", if ok { "done" } else { "failed, see the log" }));
-                        }
-                        ui.horizontal(|ui| {
-                            ui.checkbox(&mut self.show_log, "Show the log");
-                            if ui.button("Copy the log").clicked() {
-                                let text = self.job.lock().unwrap().log.join("\n");
-                                ui.ctx().copy_text(text);
-                                self.message = Some(if cfg!(target_os = "macos") {
-                                    "The log is copied: paste it in the issue with Cmd+V."
-                                } else {
-                                    "The log is copied: paste it in the issue with Ctrl+V."
-                                }.into());
+                                ui.weak("Not a git download, so Update can't refresh it; download a newer release to update.");
+                            }
+                            if ui.add_enabled(!running, egui::Button::new("Choose another folder…")).clicked() {
+                                if let Some(folder) = rfd::FileDialog::new().pick_folder() {
+                                    self.config.source = Some(folder);
+                                    self.config.save();
+                                    *self.updates.lock().unwrap() = Updates::Unknown;
+                                    if self.config.check_updates {
+                                        self.refresh_updates(ctx);
+                                    }
+                                }
                             }
                         });
-                    }
-                });
+                        if let Updates::Available(commits) = &updates {
+                            ui.add_space(4.0);
+                            let what = if commits.len() == 1 { "1 update".to_owned() } else { format!("{} updates", commits.len()) };
+                            ui.colored_label(egui::Color32::from_rgb(240, 190, 80), format!("{what} available:"));
+                            for subject in commits.iter().take(8) {
+                                ui.add(egui::Label::new(format!("• {subject}")).truncate());
+                            }
+                            if commits.len() > 8 {
+                                ui.weak(format!("and {} more", commits.len() - 8));
+                            }
+                            let label = if built { "Update and rebuild" } else { "Update" };
+                            let git = tools.as_ref().is_some_and(|t| t.list.first().is_some_and(|g| g.found.is_some()));
+                            if ui.add_enabled(!running && git, egui::Button::new(label)).clicked() {
+                                self.start_update(ctx);
+                                self.then_build = built;
+                            }
+                        }
+                        if self.stale && !running {
+                            ui.weak("The project was updated: press Rebuild to use it.");
+                        }
+                        if ui.checkbox(&mut self.config.check_updates, "Look for updates when the launcher opens").changed() {
+                            self.config.save();
+                        }
+                    });
+                }
+
+                // 4. build and play
+                if self.release.is_none() {
+                    section(ui, |ui| {
+                        ui.strong("4. Build and play");
+                        let tools_ok = tools.as_ref().is_some_and(Tools::ok);
+                        let can_build = !running && rom_ok && tools_ok && source_ok;
+                        if built && !running {
+                            status(ui, true, "The game is built.");
+                        } else if !running {
+                            ui.label("The first build takes 20 minutes or more. You can keep using the computer meanwhile.");
+                        }
+                        ui.horizontal(|ui| {
+                            if built {
+                                let play = egui::Button::new(egui::RichText::new("  Play  ").size(20.0));
+                                if ui.add_enabled(!running && rom_ok, play).clicked() {
+                                    self.play();
+                                }
+                                if ui.add_enabled(can_build, egui::Button::new("Rebuild")).clicked() {
+                                    if let Some(tools) = &tools {
+                                        self.start_build(ctx, tools);
+                                    }
+                                }
+                            } else {
+                                let build = egui::Button::new(egui::RichText::new("  Build the game  ").size(20.0));
+                                if ui.add_enabled(can_build, build).clicked() {
+                                    if let Some(tools) = &tools {
+                                        self.start_build(ctx, tools);
+                                    }
+                                }
+                            }
+                        });
+                        if !running && !can_build && !built {
+                            let missing: Vec<&str> = [
+                                (!rom_ok, "your game"),
+                                (!tools_ok, "the tools"),
+                                (!source_ok, "the project source"),
+                            ]
+                            .into_iter()
+                            .filter_map(|(m, what)| m.then_some(what))
+                            .collect();
+                            if !missing.is_empty() {
+                                ui.weak(format!("Needs {} first.", missing.join(", ")));
+                            }
+                        }
+                        self.job_status(ui);
+                    });
+                }
 
                 if let Some(message) = &self.message {
                     ui.add_space(4.0);

@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <title>smt4-recomp</title>
+  <!-- a black tile with a white roman IV, drawn here with paths so it needs
+       no font. It is this project's own mark, not the game's artwork.
+       icon.png (1024 px) and icon.ico (16 to 256 px) are rendered from it. -->
+  <rect width="1024" height="1024" rx="228" fill="#0c0c0d"/>
+  <rect x="40" y="40" width="944" height="944" rx="196" fill="none" stroke="#ffffff" stroke-opacity="0.16" stroke-width="8"/>
+  <g fill="#f4f4f2" transform="translate(6 0)">
+    <!-- I -->
+    <rect x="200" y="252" width="96" height="520"/>
+    <rect x="152" y="252" width="192" height="60"/>
+    <rect x="152" y="712" width="192" height="60"/>
+    <!-- V: a heavy stroke on the left, a light one on the right -->
+    <polygon points="416,252 536,252 668,772 580,772"/>
+    <polygon points="752,252 824,252 676,772 640,772"/>
+    <rect x="384" y="252" width="184" height="60"/>
+    <rect x="716" y="252" width="144" height="60"/>
+  </g>
+</svg>
