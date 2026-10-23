@@ -16,6 +16,8 @@
 
 use std::path::{Path, PathBuf};
 
+pub mod icon;
+
 /// Shin Megami Tensei IV (USA)
 pub const TITLE_ID: u64 = 0x0004_0000_000E_5C00;
 

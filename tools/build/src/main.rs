@@ -21,7 +21,6 @@
 //! game's code.
 
 mod bundle;
-mod icon;
 mod patch;
 mod sha256;
 

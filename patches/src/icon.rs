@@ -1,7 +1,9 @@
-//! The game's own icon, the one the 3DS HOME Menu shows, read from your ROM
-//! for the macOS app (src/bundle.rs): the 48x48 picture in the SMDH, the
-//! ExeFS's "icon" file. Like the rest of what the build makes, it comes from
-//! the game: nothing of it is in this repository.
+//! The game's own icon, the one the 3DS HOME Menu shows, read from your ROM:
+//! the 48x48 picture in the SMDH, the ExeFS's "icon" file. The builder puts
+//! it on the macOS app it makes (tools/build/src/bundle.rs), the launcher
+//! shows it on its window and in the Dock once you choose the ROM. Like the
+//! rest of what the build makes, it comes from the game: nothing of it is
+//! in this repository.
 
 use std::io::{Read, Seek, SeekFrom};
 use std::path::Path;
@@ -78,6 +80,11 @@ fn decode(texels: &[u8]) -> Vec<[u8; 3]> {
 /// the HOME Menu's pixels are
 pub fn scaled(rgb: &[[u8; 3]], size: usize) -> Vec<[u8; 3]> {
     (0..size * size).map(|i| rgb[(i / size) * SIZE / size * SIZE + (i % size) * SIZE / size]).collect()
+}
+
+/// the icon at size pixels across, as RGBA rows from the top, for a window
+pub fn rgba(rgb: &[[u8; 3]], size: usize) -> Vec<u8> {
+    scaled(rgb, size).iter().flat_map(|&[r, g, b]| [r, g, b, 255]).collect()
 }
 
 /// an uncompressed PNG of RGB rows, square, size pixels across: zlib's

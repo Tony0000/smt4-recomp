@@ -14,6 +14,7 @@ use std::sync::{Arc, Mutex};
 use eframe::egui;
 use serde::{Deserialize, Serialize};
 
+mod game_icon;
 mod install;
 mod zig;
 
@@ -613,6 +614,9 @@ impl Launcher {
             release: install::zakuro(),
             then_play: false,
         };
+        if let Some(rom) = launcher.config.rom.as_deref().filter(|_| launcher.rom_error.is_none()) {
+            game_icon::show(ctx, rom);
+        }
         launcher.refresh_tools(ctx);
         if launcher.config.check_updates && launcher.release.is_none() {
             launcher.refresh_updates(ctx);
@@ -654,8 +658,11 @@ impl Launcher {
         self.source().join("target").join("release").join(EXE)
     }
 
-    fn set_rom(&mut self, rom: PathBuf) {
+    fn set_rom(&mut self, ctx: &egui::Context, rom: PathBuf) {
         self.rom_error = check_rom(&rom).err();
+        if self.rom_error.is_none() {
+            game_icon::show(ctx, &rom);
+        }
         self.config.rom = Some(rom);
         self.config.save();
     }
@@ -885,7 +892,7 @@ impl eframe::App for Launcher {
                         if ui.add_enabled(!running, egui::Button::new("Choose the folder…")).clicked() {
                             if let Some(folder) = rfd::FileDialog::new().pick_folder() {
                                 match find_rom(&folder) {
-                                    Some(rom) => self.set_rom(rom),
+                                    Some(rom) => self.set_rom(ctx, rom),
                                     None => {
                                         self.message = Some(format!(
                                             "No decrypted Shin Megami Tensei IV (USA) in {}.",
@@ -897,7 +904,7 @@ impl eframe::App for Launcher {
                         }
                         if ui.add_enabled(!running, egui::Button::new("Choose the file…")).clicked() {
                             if let Some(file) = rfd::FileDialog::new().add_filter("3DS game", &["3ds", "cci", "cxi"]).pick_file() {
-                                self.set_rom(file);
+                                self.set_rom(ctx, file);
                             }
                         }
                     });
