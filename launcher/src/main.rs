@@ -15,8 +15,12 @@ use eframe::egui;
 use serde::{Deserialize, Serialize};
 
 const TITLE_ID: u64 = 0x0004_0000_000E_5C00;
-const REPO: &str = "https://github.com/Invictus-potens/smt4-recomp";
+const REPO: &str = "https://github.com/Tony0000/smt4-recomp";
+/// the project's home before, whose clones look for updates here instead
+const OLD_REPOS: [&str; 2] = ["https://github.com/Invictus-potens/smt4-recomp", "https://github.com/Invictus-potens/smt4-recomp.git"];
 const EXE: &str = if cfg!(windows) { "smt4.exe" } else { "smt4" };
+/// on macOS, the app the build makes with --bundle beside the program
+const APP: &str = "SMT4.app";
 
 fn main() -> eframe::Result {
     let options = eframe::NativeOptions {
@@ -138,6 +142,8 @@ struct Tools {
     list: Vec<Tool>,
     gcc: Option<PathBuf>,
     rust_msvc: bool,
+    /// on macOS, whether Homebrew has MoltenVK, for the build to put in the app
+    moltenvk: bool,
 }
 
 impl Tools {
@@ -276,6 +282,7 @@ fn check_tools() -> Tools {
             .iter()
             .map(|bin| Path::new(bin).with_file_name("lib").join("libMoltenVK.dylib"))
             .find(|lib| lib.is_file());
+        tools.moltenvk = lib.is_some();
         tools.list.push(Tool {
             name: "MoltenVK",
             found: lib.map(|lib| lib.display().to_string()),
@@ -317,6 +324,11 @@ fn check_updates(source: &Path) -> Updates {
                 }
             })
     };
+    if git(&["remote", "get-url", "origin"]).is_ok_and(|origin| OLD_REPOS.contains(&origin.as_str())) {
+        if let Err(error) = git(&["remote", "set-url", "origin", REPO]) {
+            return Updates::Failed(error);
+        }
+    }
     if let Err(error) = git(&["fetch", "--quiet"]) {
         return Updates::Failed(error);
     }
@@ -632,6 +644,9 @@ impl Launcher {
             .arg("--")
             .arg(rom)
             .arg("--low-priority")
+            // the app to open from the Finder, with MoltenVK inside, which
+            // the build takes from Homebrew
+            .args(tools.moltenvk.then_some("--bundle"))
             .current_dir(self.source())
             .env("CC", gcc)
             .env("AR", ar)
@@ -657,10 +672,16 @@ impl Launcher {
 
     fn play(&mut self) {
         let (Some(rom), program) = (&self.config.rom, self.program()) else { return };
-        let started = Command::new(&program).arg(rom).current_dir(program.parent().unwrap_or(Path::new("."))).spawn();
+        // the app where there is one, which macOS shows as the game's
+        let app = program.with_file_name(APP);
+        let started = if cfg!(target_os = "macos") && app.is_dir() {
+            Command::new("/usr/bin/open").arg(&app).arg("--args").arg(rom).spawn().map_err(|error| (app, error))
+        } else {
+            Command::new(&program).arg(rom).current_dir(program.parent().unwrap_or(Path::new("."))).spawn().map_err(|error| (program, error))
+        };
         self.message = Some(match started {
             Ok(_) => "The game is starting.".into(),
-            Err(error) => format!("Could not start {}: {error}", program.display()),
+            Err((program, error)) => format!("Could not start {}: {error}", program.display()),
         });
     }
 }

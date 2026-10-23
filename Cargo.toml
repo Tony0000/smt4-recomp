@@ -16,8 +16,8 @@ zakuro = { git = "https://github.com/fearkov/zakuro", default-features = false }
 [target.'cfg(not(target_os = "macos"))'.dependencies]
 zakuro = { git = "https://github.com/fearkov/zakuro" }
 
-# the forks with the macOS changes, until fearkov's Zakuro and 3dsrecomp
-# have them
+# this project's forks of fearkov's Zakuro and 3dsrecomp, with macOS, the
+# menu bar and the rest this project adds
 [patch."https://github.com/fearkov/zakuro"]
 zakuro = { git = "https://github.com/Tony0000/zakuro", branch = "macos" }
 
